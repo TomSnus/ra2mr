@@ -1,0 +1,9 @@
+''' 
+        for dic in json_tuple:
+            if(isinstance(dic, dict)):
+                for k, v in dic.items():
+                    for attr in attrs:
+                        if isinstance(attr, radb.ast.AttrRef):
+                            if k is attr:
+                                yield(y, "")
+'''
