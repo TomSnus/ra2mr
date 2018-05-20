@@ -146,11 +146,10 @@ class SelectTask(RelAlgQueryTask):
         ''' ...................... fill in your code below ........................'''
         if(isinstance(condition, radb.ast.ValExprBinaryOp)):
             for k, v in json_tuple.items():
-                for cond in condition.inputs:
-                    if(isinstance(cond, radb.ast.AttrRef)):
-                        if (str(cond.name) in str(k)):
-                            if(str(cond) == v):
-                                yield (k, v)
+                if(isinstance(condition.inputs[0], radb.ast.AttrRef)):
+                    if (str(condition.inputs[0].name) in str(k)):
+                        if(str(condition.inputs[1]) == str(v)):
+                            yield (k, v)
         
         ''' ...................... fill in your code above ........................'''
 
