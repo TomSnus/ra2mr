@@ -20,6 +20,24 @@ class ExecEnv(Enum):
 '''
 Switches between different execution environments and file systems.
 '''
+parts = []
+def split_recursivee(ra):
+    if ra is not None:
+        parts.append(ra)
+        if isinstance(ra, radb.ast.Select):
+            split_recursivee(ra.cond)
+        for item in ra.inputs:
+            split_recursivee(item)
+
+def remove_duplicates(values):
+    output = []
+    seen = set()
+    for value in values:
+        if value not in seen:
+            output.append(value)
+            seen.add(value)
+    return output
+
 class OutputMixin(luigi.Task):
     exec_environment = luigi.EnumParameter(enum=ExecEnv, default=ExecEnv.HDFS)
     
@@ -113,18 +131,34 @@ class JoinTask(RelAlgQueryTask):
         raquery = radb.parse.one_statement_from_string(self.querystring)
 
         ''' ...................... fill in your code below ........................'''
-
-        yield(relation, "test")
+        split_recursivee(raquery)
+        parts_list = remove_duplicates(parts)
+        join = [x for x in parts_list if isinstance(x, radb.ast.Join)]
+        if len(join) > 0:
+            if join[0].cond.inputs[0].name == join[0].cond.inputs[1].name:
+                attribut = join[0].cond.inputs[0].name
+                yield(json_tuple[relation+"."+str(join[0].cond.inputs[0].name)], (relation, json_tuple))
 
         ''' ...................... fill in your code above ........................'''
 
 
     def reducer(self, key, values):
         raquery = radb.parse.one_statement_from_string(self.querystring)
-        
+        oldRelation = None
+        solution = {}
+        solution_list = []
+        solution_list.append(solution)
         ''' ...................... fill in your code below ........................'''
-
-        yield(key, values)
+        relation, dic = next(values)
+        oldRelation = relation
+        solution.update(dic)
+        for val in values:
+            relation, dic = val
+            if relation == oldRelation:
+                solution.update(dic)
+            else:
+                solution.update(dic)
+                yield(relation, solution_list)
         
         ''' ...................... fill in your code above ........................'''   
 
@@ -147,12 +181,12 @@ class SelectTask(RelAlgQueryTask):
         if(isinstance(condition, radb.ast.ValExprBinaryOp)):
             for k, v in json_tuple.items():
                 if isinstance(condition.inputs[0], radb.ast.AttrRef):
-                    if str(condition.inputs[0].name) in str(k):
-                        condi = str(condition.inputs[1].val).replace('\'', '')
-                        condi = condi.replace('\'', '')
-                        if str(condi) in str(v):
-                            yield (tuple, tuple)
-        
+                    if isinstance(condition.inputs[1], radb.ast.Literal):
+                        if str(condition.inputs[0].name) in str(k):
+                            condi = str(condition.inputs[1].val).replace('\'', '')
+                            condi = condi.replace('\'', '')
+                            if str(condi) == str(v):
+                                yield (relation, tuple)
         ''' ...................... fill in your code above ........................'''
 
 
@@ -192,11 +226,13 @@ class ProjectTask(RelAlgQueryTask):
         json_dic = json.loads(tuple)
         attrs = radb.parse.one_statement_from_string(self.querystring).attrs
         ''' ...................... fill in your code below ........................'''
+        dic_ = dict()
         for k,v in json_dic.items():
             for attr in attrs:
                 if(isinstance(attr, radb.ast.AttrRef)):
-                        if(str(attr.name) in str(k)):
-                            yield (k,v)
+                        if(str(attr.name) in str(k)) and str(v) not in dic_.values() and str(k) not in dic_.keys():
+                            dic_[k] = v
+        yield(relation, dic_)
 
 
         ''' ...................... fill in your code above ........................'''
@@ -205,8 +241,11 @@ class ProjectTask(RelAlgQueryTask):
     def reducer(self, key, values):
 
         ''' ...................... fill in your code below ........................'''
-
-        yield(values)
+        dic = {}
+        for item in values:
+            if item != dic:
+                dic = item
+                yield(key, values)
 
         ''' ...................... fill in your code above ........................'''
         
