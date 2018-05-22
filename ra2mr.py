@@ -56,6 +56,25 @@ class InputData(OutputMixin):
     def output(self):
         return self.get_output(self.filename)
 
+'''
+Counts the number of steps / luigi tasks that we need for evaluating this query.
+'''
+def count_steps(raquery):
+    assert(isinstance(raquery, radb.ast.Node))
+
+    if (isinstance(raquery, radb.ast.Select) or isinstance(raquery,radb.ast.Project) or
+        isinstance(raquery,radb.ast.Rename)):
+        return 1 + count_steps(raquery.inputs[0])
+
+    elif isinstance(raquery, radb.ast.Join):
+        return 1 + count_steps(raquery.inputs[0]) + count_steps(raquery.inputs[1])
+
+    elif isinstance(raquery, radb.ast.RelRef):
+        return 1
+
+    else:
+        raise Exception("count_steps: Cannot handle operator " + str(type(raquery)) + ".")
+
 
 class RelAlgQueryTask(luigi.contrib.hadoop.JobTask, OutputMixin):
     '''
@@ -119,7 +138,7 @@ class JoinTask(RelAlgQueryTask):
         assert(isinstance(raquery, radb.ast.Join))
       
         task1 = task_factory(raquery.inputs[0], step=self.step + 1, env=self.exec_environment)
-        task2 = task_factory(raquery.inputs[1], step=self.step + 2, env=self.exec_environment)
+        task2 = task_factory(raquery.inputs[1], step=self.step + count_steps(raquery.inputs[0]) + 1, env=self.exec_environment)
 
         return [task1, task2]
 
@@ -129,15 +148,20 @@ class JoinTask(RelAlgQueryTask):
         json_tuple = json.loads(tuple)
         
         raquery = radb.parse.one_statement_from_string(self.querystring)
-
+        condition = raquery.cond
         ''' ...................... fill in your code below ........................'''
-        split_recursivee(raquery)
-        parts_list = remove_duplicates(parts)
-        join = [x for x in parts_list if isinstance(x, radb.ast.Join)]
-        if len(join) > 0:
-            if join[0].cond.inputs[0].name == join[0].cond.inputs[1].name:
-                attribut = join[0].cond.inputs[0].name
-                yield(json_tuple[relation+"."+str(join[0].cond.inputs[0].name)], (relation, json_tuple))
+        #del parts[:]
+        #split_recursivee(raquery)
+        #parts_list = remove_duplicates(parts)
+        #join = [x for x in parts_list if isinstance(x, radb.ast.Join)]
+        #if len(join) == 2:
+        if condition.inputs[0].name == condition.inputs[1].name:
+            attribut = condition.inputs[0].name
+            yield(json_tuple[relation+"."+str(condition.inputs[0].name)], (relation, json_tuple))
+       # else:
+        #    if join[0].cond.inputs[0].name == join[0].cond.inputs[1].name:
+        #        attribut = join[0].cond.inputs[0].name
+        #        yield(json_tuple[relation+"."+str(join[0].cond.inputs[0].name)], (relation, json_tuple))
 
         ''' ...................... fill in your code above ........................'''
 
@@ -158,7 +182,7 @@ class JoinTask(RelAlgQueryTask):
                 solution.update(dic)
             else:
                 solution.update(dic)
-                yield(relation, solution_list)
+                yield(key, solution_list)
         
         ''' ...................... fill in your code above ........................'''   
 
@@ -178,6 +202,10 @@ class SelectTask(RelAlgQueryTask):
 
         condition = radb.parse.one_statement_from_string(self.querystring).cond
         ''' ...................... fill in your code below ........................'''
+        if not isinstance(condition.inputs[0], radb.ast.AttrRef):
+            tmp_ = condition.inputs[0]
+            condition.inputs[0] = condition.inputs[1]
+            condition.inputs[1] = tmp_
         if(isinstance(condition, radb.ast.ValExprBinaryOp)):
             for k, v in json_tuple.items():
                 if isinstance(condition.inputs[0], radb.ast.AttrRef):
@@ -204,11 +232,15 @@ class RenameTask(RelAlgQueryTask):
         json_tuple = json.loads(tuple)
 
         raquery = radb.parse.one_statement_from_string(self.querystring)
-        
         ''' ...................... fill in your code below ........................'''
-
-        yield("foo", "bar")
-        
+        dic_ = dict()
+        split_recursivee(raquery)
+        parts_list = remove_duplicates(parts)
+        rename = [x for x in parts_list if isinstance(x, radb.ast.Rename)]
+        for k,v in json_tuple.items():
+            dic_[str(k).replace(relation, rename[0].relname)] = v
+        tuple_ = (json_tuple)
+        yield(rename[0].relname, dic_)
         ''' ...................... fill in your code above ........................'''
 
 
