@@ -169,9 +169,11 @@ class JoinTask(RelAlgQueryTask):
         # parts_list = remove_duplicates(parts)
         # join = [x for x in parts_list if isinstance(x, radb.ast.Join)]
         # if len(join) == 2:
+        rel1 = condition.inputs[0].rel
+        rel2 = condition.inputs[1].rel
         if condition.inputs[0].name == condition.inputs[1].name:
-            attribut = condition.inputs[0].name
             yield (json_tuple[relation + "." + str(condition.inputs[0].name)], (relation, json_tuple))
+            #yield (json_tuple[rel2 + "." + str(condition.inputs[0].name)], (relation, json_tuple))
         # else:
         #    if join[0].cond.inputs[0].name == join[0].cond.inputs[1].name:
         #        attribut = join[0].cond.inputs[0].name
@@ -181,21 +183,41 @@ class JoinTask(RelAlgQueryTask):
 
     def reducer(self, key, values):
         raquery = radb.parse.one_statement_from_string(self.querystring)
+        condition = raquery.cond
+        rel1 = condition.inputs[0].rel
+        rel2 = condition.inputs[1].rel
+        condition = raquery.cond
         oldRelation = None
         solution = {}
         solution_list = []
         solution_list.append(solution)
         ''' ...................... fill in your code below ........................'''
-        relation, dic = next(values)
-        oldRelation = relation
-        solution.update(dic)
-        for val in values:
-            relation, dic = val
-            if relation == oldRelation:
-                solution.update(dic)
-            else:
-                solution.update(dic)
-                yield (key, solution_list)
+        #relation, dic = next(values)
+        #oldRelation = relation
+        #solution.update(dic)
+        list_ = list(values)
+        list_ = sorted(list_, key=lambda x: x[0])
+        cnt = 1
+        for v in list_:
+            r, d = v
+            solution.update(d)
+            for val in list_:
+                relation, dic = val
+                if r != relation and cnt < len(list_):
+                    solution.update(dic)
+                    cnt = cnt+1
+                    yield(relation, json.dumps(solution))
+
+
+                # relation, dic = val
+                # if relation == oldRelation:
+                #     i = 1
+                #     #solution.update(dic)
+                # else:
+                #     solution.update(dic)
+                #     oldRelation = relation
+                #     solution = dict()
+                #     yield (key, solution_list)
 
         ''' ...................... fill in your code above ........................'''
 
@@ -265,7 +287,7 @@ class RenameTask(RelAlgQueryTask):
         tuple_ = (json_tuple)
         solution_list = []
         solution_list.append(dic_)
-        yield (rename[0].relname, solution_list)
+        yield (rename[0].relname, json.dumps(dic_))
         ''' ...................... fill in your code above ........................'''
 
 
