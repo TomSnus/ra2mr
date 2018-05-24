@@ -322,7 +322,7 @@ class ProjectTask(RelAlgQueryTask):
                         if (str(attr.name) in str(k)) and str(
                                 k) not in dic_.keys():  # and str(v) not in dic_.values() and str(k) not in dic_.keys():
                             dic_[k] = json_dic[k]
-            yield (dic_, dic_)
+            yield (dic_, json.dumps(dic_))
 
         solution_list = []
         solution_list.append(dic_)
