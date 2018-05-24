@@ -1,3 +1,4 @@
+
 import json
 import luigi
 import radb
@@ -6,7 +7,14 @@ import ra2mr
 
 '''
 Requires that pytest and pytest-repeat are installed.
-To run each test three times, to supress warnings, run as
+
+To run all the tests, supressing warnings and output, run
+
+python3 -m pytest test_ra2mr.py -p no:warnings --show-capture=no
+
+
+To run each test three times, but stop once one test fails (-x),
+run as
 
 pytest -x test_ra2mr.py -p no:warnings --count=3
 
@@ -78,7 +86,7 @@ def prepareMockFileSystem():
 
         f4 = luigi.mock.MockTarget('Serves.json').open('w')
         f4.write('Serves\t{"Serves.pizzeria" : "Chicago Pizza", "Serves.pizza" : "cheese", "Serves.price" : 7.75}\n')
-        f4.write('Serves\t{"Serves.pizzeria" : "Chicago Pizza", "Serves.pizza" : "supreme", "Servves.price" : 8.5}\n')
+        f4.write('Serves\t{"Serves.pizzeria" : "Chicago Pizza", "Serves.pizza" : "supreme", "Serves.price" : 8.5}\n')
         f4.write('Serves\t{"Serves.pizzeria" : "Dominos", "Serves.pizza" : "cheese", "Serves.price" : 9.75}\n')
         f4.write('Serves\t{"Serves.pizzeria" : "Dominos", "Serves.pizza" : "mushroom", "Serves.price" : 11}\n')
         f4.write('Serves\t{"Serves.pizzeria" : "Little Ceasars", "Serves.pizza" : "cheese", "Serves.price" : 7}\n')
