@@ -192,10 +192,18 @@ class JoinTask(RelAlgQueryTask):
         solution_list = []
         solution_list.append(solution)
         ''' ...................... fill in your code below ........................'''
-        #relation, dic = next(values)
-        #oldRelation = relation
-        #solution.update(dic)
+
         list_ = list(values)
+
+        cnt_list = []
+        # get numbber of producint records
+        for item in list_:
+            rel, dictionary = item
+            cnt_list.append(rel)
+        key_rel1 = [k for k in cnt_list if k == rel1]
+        key_rel2 = [k for k in cnt_list if k == rel2]
+        max_count = len(key_rel1)*len(key_rel2)
+
         list_ = sorted(list_, key=lambda x: x[0])
         cnt = 1
         for v in list_:
@@ -203,10 +211,10 @@ class JoinTask(RelAlgQueryTask):
             solution.update(d)
             for val in list_:
                 relation, dic = val
-                if r != relation and cnt < len(list_):
+                if r != relation and cnt <= max_count:
                     solution.update(dic)
                     cnt = cnt+1
-                    yield(relation, json.dumps(solution))
+                    yield(r, json.dumps(solution))
 
 
                 # relation, dic = val
@@ -248,7 +256,7 @@ class SelectTask(RelAlgQueryTask):
                             condi = str(condition.inputs[1].val).replace('\'', '') #remove special characters
                             condi = condi.replace('\'', '')
                             if str(condi) == str(v):
-                                yield (relation, tuple)
+                                yield (relation, json.dumps(json_tuple))
         else:
             condi_1 = condition.inputs[0]
             condi_2 = condition.inputs[1]
@@ -260,7 +268,7 @@ class SelectTask(RelAlgQueryTask):
                 condi_2_val = str(condi_2.inputs[1].val).replace('\'', '')
                 condi_2_val = condi_2_val.replace('\'', '')
                 if condi_1_val in json_tuple.values() and float(condi_2_val) in json_tuple.values():
-                    yield (relation, tuple)
+                    yield (relation, json.dumps(json_tuple))
         ''' ...................... fill in your code above ........................'''
 
 
