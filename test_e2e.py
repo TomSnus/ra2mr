@@ -32,6 +32,7 @@ class End2EndUnitTests(unittest.TestCase):
         
         ra1 = raopt.rule_break_up_selections(ra0)
         ra2 = raopt.rule_push_down_selections(ra1, dd)
+
         ra3 = raopt.rule_merge_selections(ra2)
         ra4 = raopt.rule_introduce_joins(ra3)
 
@@ -94,6 +95,13 @@ class End2EndUnitTests(unittest.TestCase):
         computed = self._evaluate(sqlstring)
         self.assertEqual(len(computed), 8)
 
+    # NEW as of 19-MAY-2018
+    def test_person_join_eats_join_serves_where(self):
+        sqlstring = "select distinct * from Person, Eats, Serves " \
+                    "where Person.name = Eats.name and Eats.pizza = Serves.pizza "\
+                    "and Person.age = 16 and Serves.pizzeria = 'Little Ceasars'"
+        computed = self._evaluate(sqlstring)
+        self.assertEqual(len(computed), 2)
 
 if __name__ == '__main__':
     unittest.main()

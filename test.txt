@@ -22,3 +22,8 @@ project:
                         if str(condition.inputs[0].name) in str(k):
                             if str(condition.inputs[1].val) in str(v):
                                 yield (tuple, tuple)
+
+python3.6 ra2mr.py SelectTask --querystring "\select_{gender='female'} Person;" --exec-environment LOCAL --local-scheduler
+(\\rename_{A:*} Eats) \join_{A.pizza = B.pizza} (\\rename_{B:*} Eats);
+
+"select distinct * from Person, Eats, Serves where Person.name = Eats.name and Eats.pizza = Serves.pizza and Person.age = 16 and Serves.pizzeria = 'Little Ceasars'"
