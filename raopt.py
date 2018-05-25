@@ -110,12 +110,19 @@ def rule_merge_selections(ra):
     table = select[1].inputs[0]
     if isinstance(table, Cross):
         for relation in table.inputs[:]:
-            relations.remove(relation)
+            if isinstance(relation, Select):
+                relations.remove(relation.inputs[0])
+            else:
+                relations.remove(relation)
     else:
         relations.remove(table)
     cond = valExpr[0]
-    for i in range(1, len(valExpr)):
-        cond = ValExprBinaryOp(cond, sym.AND ,valExpr[1])
+    if len(valExpr) == 3:
+        for i in range(1, len(valExpr)-1):
+            cond = ValExprBinaryOp(cond, sym.AND ,valExpr[i])
+    else:
+        for i in range(1, len(valExpr)):
+            cond = ValExprBinaryOp(cond, sym.AND ,valExpr[i])
     select = Select(cond, table)
     relations.append(select)
     joined_relations = create_connection(relations)
@@ -249,7 +256,10 @@ def extract_cross(rel, valExpr):
         if isinstance(relation[0].inputs[0], Select):
             relation_x1 = relation[0].inputs[0].inputs[0]
         else: relation_x1 = relation[0].inputs[0]
-        select = Select(valExpr[1], Select(valExpr[2], relation_x1))
+        if len(valExpr) == 5:
+            select = Select(valExpr[3] , Select(valExpr[2], Select(valExpr[4], relation_x1)))
+        else:
+            select = Select(valExpr[1], Select(valExpr[2], relation_x1))
         relation_x2 = relation[0].inputs[1]
         relation[0] = Cross(select, relation_x2)
     elif any(isinstance(x, Rename) for x in rel):

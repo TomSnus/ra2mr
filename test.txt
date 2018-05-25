@@ -27,3 +27,4 @@ python3.6 ra2mr.py SelectTask --querystring "\select_{gender='female'} Person;" 
 (\\rename_{A:*} Eats) \join_{A.pizza = B.pizza} (\\rename_{B:*} Eats);
 
 "select distinct * from Person, Eats, Serves where Person.name = Eats.name and Eats.pizza = Serves.pizza and Person.age = 16 and Serves.pizzeria = 'Little Ceasars'"
+\select_{(((Person.name = Eats.name) and (Eats.pizza = Serves.pizza)) and (Person.age = 16)) and (Serves.pizzeria = 'Little Ceasars')} ((Person \cross Eats) \cross Serves)
