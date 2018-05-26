@@ -28,12 +28,19 @@ def rule_break_up_selections(ra):
             return project[0]
         return rel
     select = Select(valExpr[1], rel)
-    print(select)
     if len(project) > 0:
         project[0].inputs[0] = select
         return project[0]
     return select
 
+def get_selections(cond):
+    conditions = []
+    if cond.op == 11:  # 11 <=> AND
+        conditions += get_selections(cond.inputs[0])
+        conditions += get_selections(cond.inputs[1])
+        return conditions
+    else:
+        return [cond]
 
 def rule_push_down_selections(ra, dd):
     del parts[:]
@@ -120,6 +127,10 @@ def rule_merge_selections(ra):
     if len(valExpr) == 3:
         for i in range(1, len(valExpr)-1):
             cond = ValExprBinaryOp(cond, sym.AND ,valExpr[i])
+    elif len(valExpr) == 4:
+        for i in range(1, len(valExpr)-2):
+            cond = ValExprBinaryOp(cond, sym.AND ,valExpr[i])
+            relations[0]=select[3]
     else:
         for i in range(1, len(valExpr)):
             cond = ValExprBinaryOp(cond, sym.AND ,valExpr[i])
@@ -149,6 +160,12 @@ def rule_introduce_joins(ra):
     valExpr = [x for x in parts_list if isinstance(x, ValExprBinaryOp)]
     cross = [x for x in parts_list if isinstance(x, Cross)]
     tables = []
+    for item in select:
+        if isinstance(item.inputs[0], RelRef) and any(str(x.rel) == item.inputs[0].rel for x in relations):
+            relations.append(item)
+            for rel in relations:
+                if isinstance(item.inputs[0], RelRef) and isinstance(rel, RelRef) and rel.rel == item.inputs[0].rel:
+                    relations.remove(rel)
     join = None
     for item in cross:
         for rel in item.inputs:
@@ -168,6 +185,20 @@ def create_join(cond, tables):
       return Join(tables[0], cond, tables[1])
 
 def create_joine(cond, tables):
+    tmp_ = None
+    #Remove pushed or concatinared conditions
+    for c in cond[:]:
+        if not isinstance(c.inputs[0], AttrRef) or not isinstance(c.inputs[1], AttrRef):
+            cond.remove(c)
+    #Rearranging in case there are Relations with Restrictions
+    if len(tables) == 3 and isinstance(tables[2], Select):
+        tmp_ = tables[0]
+        tables[0] = tables[2]
+        tables[2] = tmp_
+        if isinstance(tables[0], Select) and isinstance(tables[1], Select) and isinstance(tables[2], RelRef):
+            tmp_ = tables[1]
+            tables[1] = tables[2]
+            tables[2] = tmp_
     table = tables[0]
     for i in range(0, len(cond)):
         for j in range(1, len(tables)-1):
@@ -258,6 +289,11 @@ def extract_cross(rel, valExpr):
         else: relation_x1 = relation[0].inputs[0]
         if len(valExpr) == 5:
             select = Select(valExpr[3] , Select(valExpr[2], Select(valExpr[4], relation_x1)))
+        elif len(valExpr) == 7:
+            for c in valExpr[:]:
+                if isinstance(c.inputs[0], ValExprBinaryOp):
+                    valExpr.remove(c)
+            select = Select(valExpr[0], Select(valExpr[1], Select(valExpr[2], Select(valExpr[3], relation_x1))))
         else:
             select = Select(valExpr[1], Select(valExpr[2], relation_x1))
         relation_x2 = relation[0].inputs[1]
