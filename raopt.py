@@ -287,9 +287,10 @@ def extract_cross(rel, valExpr):
         if isinstance(relation[0].inputs[0], Select):
             relation_x1 = relation[0].inputs[0].inputs[0]
         else: relation_x1 = relation[0].inputs[0]
-        if len(valExpr) == 5:
+        if len(valExpr) == 5: #special case treatment
             select = Select(valExpr[3] , Select(valExpr[2], Select(valExpr[4], relation_x1)))
         elif len(valExpr) == 7:
+            #remove unnecessay expressions
             for c in valExpr[:]:
                 if isinstance(c.inputs[0], ValExprBinaryOp):
                     valExpr.remove(c)

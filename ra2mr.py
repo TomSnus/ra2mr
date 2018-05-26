@@ -337,8 +337,6 @@ class ProjectTask(RelAlgQueryTask):
         json_dic = json.loads(tuple)
         attrs = radb.parse.one_statement_from_string(self.querystring).attrs
         ''' ...................... fill in your code below ........................'''
-
-        # dic_ = dict()
         for k in list(json_dic.keys()):
             dic_ = dict()
             for k in list(json_dic.keys()):
