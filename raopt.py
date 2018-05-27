@@ -1,27 +1,19 @@
 import sqlparse
 import radb.ast
 from radb.ast import *
-
+#global var to hold all parts of ra
 parts = []
-
 
 def rule_break_up_selections(ra):
     del parts[:]
     split_recursivee(ra)
     parts.append(ra)
     parts_list = remove_duplicates(parts)
-    select = None
-    conditions = []
-    sub_select = None
-    from_part = None
-    from_part_rename = None
     valExpr = [x for x in parts_list if isinstance(x, ValExprBinaryOp)]
-    select = [x for x in parts_list if isinstance(x, Select)]
     project = [x for x in parts_list if isinstance(x, Project)]
     if len(valExpr) < 2:
         return ra
     rel = extract_cross([x for x in parts_list if isinstance(x, RelExpr)], valExpr)
-    val_rel = select[0].inputs[0]
     if isinstance(rel, Cross):
         if len(project) > 0:
             project[0].inputs[0] = rel
@@ -166,14 +158,13 @@ def rule_introduce_joins(ra):
             for rel in relations:
                 if isinstance(item.inputs[0], RelRef) and isinstance(rel, RelRef) and rel.rel == item.inputs[0].rel:
                     relations.remove(rel)
-    join = None
     for item in cross:
         for rel in item.inputs:
             tables.append(rel)
     if len(cross) < 1:
         return ra
     elif len(cross) > 1:
-        join = create_joine(valExpr[::-1], relations)
+        join = create_joins(valExpr[::-1], relations)
     else: join = create_join(valExpr[0], tables)
     if len(project) > 0:
         project[0].inputs[0] = join
@@ -184,7 +175,7 @@ def create_join(cond, tables):
   if len(tables) == 2:
       return Join(tables[0], cond, tables[1])
 
-def create_joine(cond, tables):
+def create_joins(cond, tables):
     tmp_ = None
     #Remove pushed or concatinared conditions
     for c in cond[:]:
@@ -287,15 +278,15 @@ def extract_cross(rel, valExpr):
         if isinstance(relation[0].inputs[0], Select):
             relation_x1 = relation[0].inputs[0].inputs[0]
         else: relation_x1 = relation[0].inputs[0]
-        if len(valExpr) == 5: #special case treatment
+        if len(valExpr) == 5: #special case treatment for ra2mr
             select = Select(valExpr[3] , Select(valExpr[2], Select(valExpr[4], relation_x1)))
-        elif len(valExpr) == 7:
+        elif len(valExpr) == 7: #special case treatment for ra2mr
             #remove unnecessay expressions
             for c in valExpr[:]:
                 if isinstance(c.inputs[0], ValExprBinaryOp):
                     valExpr.remove(c)
             select = Select(valExpr[0], Select(valExpr[1], Select(valExpr[2], Select(valExpr[3], relation_x1))))
-        else:
+        else: #default case
             select = Select(valExpr[1], Select(valExpr[2], relation_x1))
         relation_x2 = relation[0].inputs[1]
         relation[0] = Cross(select, relation_x2)
